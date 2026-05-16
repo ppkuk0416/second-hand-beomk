@@ -1,7 +1,7 @@
 "use client";
 
 import { Review } from "@/lib/types";
-import { Star } from "lucide-react";
+import { Star, MessageSquare } from "lucide-react";
 
 interface ReviewsSectionProps {
   reviews: Review[];
@@ -10,12 +10,12 @@ interface ReviewsSectionProps {
 function StarRating({ rating }: { rating: number }) {
   return (
     <div className="flex gap-0.5">
-      {Array.from({ length: 5 }).map((_, i) => (
+      {[1, 2, 3, 4, 5].map((i) => (
         <Star
           key={i}
           size={14}
           className={
-            i < rating ? "fill-yellow-400 text-yellow-400" : "text-gray-600"
+            i <= rating ? "fill-yellow-400 text-yellow-400" : "text-gray-600"
           }
         />
       ))}
@@ -24,6 +24,18 @@ function StarRating({ rating }: { rating: number }) {
 }
 
 export function ReviewsSection({ reviews }: ReviewsSectionProps) {
+  if (reviews.length === 0) {
+    return (
+      <div className="bg-gray-900 rounded-2xl p-6 border border-gray-700">
+        <h3 className="text-lg font-semibold text-white mb-4">실사용 후기</h3>
+        <div className="flex flex-col items-center justify-center py-10 text-gray-500">
+          <MessageSquare size={32} className="mb-3 opacity-40" />
+          <p className="text-sm">아직 등록된 후기가 없습니다</p>
+        </div>
+      </div>
+    );
+  }
+
   const avgRating =
     reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
 
@@ -48,7 +60,7 @@ export function ReviewsSection({ reviews }: ReviewsSectionProps) {
           >
             <div className="flex items-start justify-between mb-2">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
                   {review.author[0].toUpperCase()}
                 </div>
                 <div>
@@ -58,7 +70,7 @@ export function ReviewsSection({ reviews }: ReviewsSectionProps) {
                   <div className="text-gray-500 text-xs">{review.source}</div>
                 </div>
               </div>
-              <div className="text-right">
+              <div className="text-right shrink-0">
                 <StarRating rating={review.rating} />
                 <div className="text-gray-500 text-xs mt-0.5">
                   {review.date}

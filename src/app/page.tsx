@@ -1,33 +1,11 @@
 import Link from "next/link";
 import { SearchBar } from "@/components/SearchBar";
+import { SignalBadge } from "@/components/SignalBadge";
 import { MOCK_PRODUCTS } from "@/lib/mockData";
 import { TrendingDown, ShieldCheck, BarChart2 } from "lucide-react";
 
 function formatPrice(price: number) {
   return price.toLocaleString("ko-KR") + "원";
-}
-
-function SignalBadge({ signal }: { signal: "good" | "fair" | "bad" }) {
-  if (signal === "good")
-    return (
-      <span className="flex items-center gap-1 text-xs bg-green-900/60 text-green-400 px-2 py-0.5 rounded-full font-medium border border-green-700/50">
-        <span className="w-2 h-2 rounded-full bg-green-400 inline-block" />
-        구매 추천
-      </span>
-    );
-  if (signal === "fair")
-    return (
-      <span className="flex items-center gap-1 text-xs bg-yellow-900/60 text-yellow-400 px-2 py-0.5 rounded-full font-medium border border-yellow-700/50">
-        <span className="w-2 h-2 rounded-full bg-yellow-400 inline-block" />
-        보통
-      </span>
-    );
-  return (
-    <span className="flex items-center gap-1 text-xs bg-red-900/60 text-red-400 px-2 py-0.5 rounded-full font-medium border border-red-700/50">
-      <span className="w-2 h-2 rounded-full bg-red-400 inline-block" />
-      비추천
-    </span>
-  );
 }
 
 export default function Home() {
@@ -69,7 +47,6 @@ export default function Home() {
           <SearchBar large />
         </div>
 
-        {/* Feature pills */}
         <div className="flex flex-wrap justify-center gap-3 mt-8">
           {[
             "신제품가 비교",
@@ -110,15 +87,15 @@ export default function Home() {
                   <img
                     src={product.imageUrl}
                     alt={product.name}
-                    className="w-20 h-20 object-cover rounded-xl bg-gray-800"
+                    className="w-20 h-20 object-cover rounded-xl bg-gray-800 shrink-0"
                   />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
-                      <div>
+                      <div className="min-w-0">
                         <div className="text-gray-400 text-xs mb-0.5">
                           {product.brand} · {product.category}
                         </div>
-                        <div className="text-white font-semibold text-base leading-tight group-hover:text-blue-400 transition-colors">
+                        <div className="text-white font-semibold text-base leading-tight group-hover:text-blue-400 transition-colors truncate">
                           {product.name}
                         </div>
                       </div>

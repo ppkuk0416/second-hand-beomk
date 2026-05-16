@@ -1,38 +1,14 @@
 import Link from "next/link";
 import { SearchBar } from "@/components/SearchBar";
+import { SignalBadge } from "@/components/SignalBadge";
 import { searchProducts } from "@/lib/mockData";
-import { TrendingDown } from "lucide-react";
+import { TrendingDown, SearchX } from "lucide-react";
 
 function formatPrice(price: number) {
   return price.toLocaleString("ko-KR") + "원";
 }
 
-function SignalLight({ signal }: { signal: "good" | "fair" | "bad" }) {
-  const config = {
-    good: { color: "bg-green-500", text: "구매 추천", textColor: "text-green-400" },
-    fair: { color: "bg-yellow-400", text: "보통 거래", textColor: "text-yellow-400" },
-    bad: { color: "bg-red-500", text: "비추천", textColor: "text-red-400" },
-  }[signal];
-
-  return (
-    <div className="flex items-center gap-1.5">
-      <div className={`w-2.5 h-2.5 rounded-full ${config.color}`} />
-      <span className={`text-xs font-medium ${config.textColor}`}>{config.text}</span>
-    </div>
-  );
-}
-
-export default function SearchPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ q?: string }>;
-}) {
-  return (
-    <SearchPageContent searchParams={searchParams} />
-  );
-}
-
-async function SearchPageContent({
+export default async function SearchPage({
   searchParams,
 }: {
   searchParams: Promise<{ q?: string }>;
@@ -58,19 +34,40 @@ async function SearchPageContent({
 
       <main className="max-w-5xl mx-auto px-4 py-8">
         <div className="text-gray-400 text-sm mb-6">
-          &quot;{q}&quot; 검색 결과 —{" "}
+          <span className="text-white font-medium">&ldquo;{q}&rdquo;</span> 검색 결과 —{" "}
           <span className="text-white font-medium">{results.length}개</span> 제품
         </div>
 
         {results.length === 0 ? (
-          <div className="text-center py-20 text-gray-500">
-            검색 결과가 없습니다. 다른 검색어를 입력해보세요.
+          <div className="flex flex-col items-center justify-center py-28 text-gray-500">
+            <SearchX size={48} className="mb-4 opacity-40" />
+            <p className="text-lg font-medium text-gray-400 mb-1">
+              검색 결과가 없습니다
+            </p>
+            <p className="text-sm mb-6">
+              다른 검색어를 입력하거나 카테고리로 찾아보세요
+            </p>
+            <div className="flex flex-wrap justify-center gap-2">
+              {["Galaxy", "iPhone", "MacBook", "Dyson"].map((s) => (
+                <Link
+                  key={s}
+                  href={`/search?q=${s}`}
+                  className="bg-gray-800 hover:bg-gray-700 text-gray-300 px-4 py-2 rounded-xl text-sm border border-gray-700 transition-colors"
+                >
+                  {s}
+                </Link>
+              ))}
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {results.map((product) => {
               const savings = Math.round(
                 (1 - product.avgUsedPrice / product.currentNewPrice) * 100
+              );
+              const totalListings = product.platforms.reduce(
+                (s, p) => s + p.count,
+                0
               );
               return (
                 <Link
@@ -90,7 +87,7 @@ async function SearchPageContent({
                     <div className="text-white font-semibold text-base leading-snug group-hover:text-blue-400 transition-colors mb-3">
                       {product.name}
                     </div>
-                    <SignalLight signal={product.dealAnalysis.signal} />
+                    <SignalBadge signal={product.dealAnalysis.signal} />
                     <div className="mt-3 flex items-end justify-between">
                       <div>
                         <div className="text-gray-500 text-xs">평균 중고가</div>
@@ -104,7 +101,7 @@ async function SearchPageContent({
                       </div>
                     </div>
                     <div className="mt-3 text-xs text-gray-500">
-                      매물 {product.platforms.reduce((s, p) => s + p.count, 0)}개 · 4개 플랫폼
+                      매물 {totalListings}개 · 4개 플랫폼
                     </div>
                   </div>
                 </Link>

@@ -7,6 +7,8 @@ import { PriceHistoryChart } from "@/components/PriceHistoryChart";
 import { SpecsTable } from "@/components/SpecsTable";
 import { ReviewsSection } from "@/components/ReviewsSection";
 import { SearchBar } from "@/components/SearchBar";
+import { SignalBadge } from "@/components/SignalBadge";
+import { ImageGallery } from "@/components/ImageGallery";
 import { TrendingDown, ArrowLeft, Calendar } from "lucide-react";
 
 function formatPrice(price: number) {
@@ -29,6 +31,12 @@ export default async function ProductPage({
   const savingsFromRelease = Math.round(
     (1 - product.avgUsedPrice / product.releasePrice) * 100
   );
+
+  const signalColors = {
+    good: "bg-green-900/20 border-green-700/50 text-green-300",
+    fair: "bg-yellow-900/20 border-yellow-700/50 text-yellow-300",
+    bad: "bg-red-900/20 border-red-700/50 text-red-300",
+  };
 
   return (
     <div className="min-h-screen bg-gray-950">
@@ -59,20 +67,17 @@ export default async function ProductPage({
 
         {/* Product hero */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {/* Image */}
-          <div className="rounded-2xl overflow-hidden bg-gray-900 border border-gray-700">
-            <img
-              src={product.imageUrl}
-              alt={product.name}
-              className="w-full h-72 object-cover"
-            />
-          </div>
+          {/* Image gallery */}
+          <ImageGallery images={product.images} alt={product.name} />
 
           {/* Info */}
           <div className="space-y-5">
             <div>
-              <div className="text-gray-400 text-sm mb-1">
-                {product.brand} · {product.category}
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-gray-400 text-sm">
+                  {product.brand} · {product.category}
+                </span>
+                <SignalBadge signal={product.dealAnalysis.signal} />
               </div>
               <h1 className="text-2xl font-bold text-white">{product.name}</h1>
               <div className="flex items-center gap-1.5 text-gray-500 text-sm mt-1">
@@ -85,19 +90,19 @@ export default async function ProductPage({
             <div className="grid grid-cols-3 gap-3">
               <div className="bg-gray-900 border border-gray-700 rounded-xl p-3">
                 <div className="text-gray-400 text-xs mb-1">출시가</div>
-                <div className="text-white font-bold">
+                <div className="text-white font-bold text-sm sm:text-base">
                   {formatPrice(product.releasePrice)}
                 </div>
               </div>
               <div className="bg-gray-900 border border-gray-700 rounded-xl p-3">
                 <div className="text-gray-400 text-xs mb-1">현재 신제품가</div>
-                <div className="text-blue-400 font-bold">
+                <div className="text-blue-400 font-bold text-sm sm:text-base">
                   {formatPrice(product.currentNewPrice)}
                 </div>
               </div>
               <div className="bg-gray-900 border border-green-700/50 rounded-xl p-3">
                 <div className="text-gray-400 text-xs mb-1">중고 평균가</div>
-                <div className="text-green-400 font-bold">
+                <div className="text-green-400 font-bold text-sm sm:text-base">
                   {formatPrice(product.avgUsedPrice)}
                 </div>
               </div>
@@ -113,38 +118,27 @@ export default async function ProductPage({
               </span>
             </div>
 
-            {/* Traffic light inline summary */}
+            {/* Deal summary */}
             <div
-              className={`rounded-xl border px-4 py-3 text-sm ${
-                product.dealAnalysis.signal === "good"
-                  ? "bg-green-900/20 border-green-700/50 text-green-300"
-                  : product.dealAnalysis.signal === "fair"
-                    ? "bg-yellow-900/20 border-yellow-700/50 text-yellow-300"
-                    : "bg-red-900/20 border-red-700/50 text-red-300"
-              }`}
+              className={`rounded-xl border px-4 py-3 text-sm ${signalColors[product.dealAnalysis.signal]}`}
             >
-              <div className="flex items-center gap-2 font-semibold mb-1">
-                <span
-                  className={`w-2.5 h-2.5 rounded-full ${
-                    product.dealAnalysis.signal === "good"
-                      ? "bg-green-400"
-                      : product.dealAnalysis.signal === "fair"
-                        ? "bg-yellow-400"
-                        : "bg-red-400"
-                  }`}
-                />
-                {product.dealAnalysis.signal === "good"
-                  ? "구매 추천"
-                  : product.dealAnalysis.signal === "fair"
-                    ? "보통 거래"
-                    : "구매 비추천"}
-              </div>
-              <p className="text-gray-400">{product.dealAnalysis.reason}</p>
+              <p className="text-gray-300 leading-relaxed">
+                {product.dealAnalysis.reason}
+              </p>
+            </div>
+
+            {/* Platform count */}
+            <div className="text-gray-500 text-sm">
+              총{" "}
+              <span className="text-white font-medium">
+                {product.platforms.reduce((s, p) => s + p.count, 0)}개
+              </span>{" "}
+              매물 · 4개 플랫폼 기준
             </div>
           </div>
         </div>
 
-        {/* Main content grid */}
+        {/* Traffic light + Platform comparison */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
           <TrafficLight analysis={product.dealAnalysis} />
           <PriceComparison
