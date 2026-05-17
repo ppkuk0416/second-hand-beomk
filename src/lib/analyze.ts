@@ -24,7 +24,7 @@ export interface AnalysisResult {
   avgUsedPrice: number;
   specs: { name: string; value: string }[];
   platforms: PlatformData[];
-  priceHistory: { date: string; avgUsedPrice: number }[];
+  priceHistory: { date: string; avgUsedPrice: number; platform: string }[];
   reviews: { author: string; rating: number; date: string; content: string; source: string }[];
   dealAnalysis: {
     signal: "good" | "fair" | "bad";
@@ -82,7 +82,7 @@ async function tryJoonggonara(query: string) {
 function generatePriceHistory(
   startPrice: number,
   endPrice: number
-): { date: string; avgUsedPrice: number }[] {
+): { date: string; avgUsedPrice: number; platform: string }[] {
   const history = [];
   const now = new Date();
   for (let i = 12; i >= 0; i--) {
@@ -93,7 +93,7 @@ function generatePriceHistory(
     const price = Math.round(
       startPrice - (startPrice - endPrice) * progress + noise
     );
-    history.push({ date: date.toISOString().split("T")[0], avgUsedPrice: price });
+    history.push({ date: date.toISOString().split("T")[0], avgUsedPrice: price, platform: "전체 평균" });
   }
   return history;
 }

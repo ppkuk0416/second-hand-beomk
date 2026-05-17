@@ -1,12 +1,37 @@
 import Link from "next/link";
 import { SearchBar } from "@/components/SearchBar";
-import { SignalBadge } from "@/components/SignalBadge";
-import { MOCK_PRODUCTS } from "@/lib/mockData";
-import { TrendingDown, ShieldCheck, BarChart2 } from "lucide-react";
+import { TrendingDown, ShieldCheck, Zap, Brain, BarChart2 } from "lucide-react";
 
-function formatPrice(price: number) {
-  return price.toLocaleString("ko-KR") + "원";
-}
+const EXAMPLE_SEARCHES = [
+  "커클랜드 드라이버 10.5도",
+  "갤럭시 S24 울트라",
+  "아이폰 15 프로",
+  "맥북 프로 M3",
+  "다이슨 V15",
+  "소니 WH-1000XM5",
+  "에어팟 프로 2세대",
+  "닌텐도 스위치 OLED",
+  "LG 그램 16",
+  "발뮤다 토스터",
+];
+
+const HOW_IT_WORKS = [
+  {
+    icon: <Zap size={20} className="text-orange-400" />,
+    title: "실시간 수집",
+    desc: "번개장터·중고나라 API를 통해 지금 올라온 매물을 즉시 수집합니다",
+  },
+  {
+    icon: <Brain size={20} className="text-purple-400" />,
+    title: "AI 분석",
+    desc: "Claude가 오타·약어도 파악해 정확한 제품을 찾고 시세를 분석합니다",
+  },
+  {
+    icon: <BarChart2 size={20} className="text-blue-400" />,
+    title: "구매 판단",
+    desc: "신호등(빨강·주황·초록)으로 지금 사는 게 맞는지 알려드립니다",
+  },
+];
 
 export default function Home() {
   return (
@@ -21,106 +46,92 @@ export default function Home() {
             <span className="font-bold text-white text-lg">중고비교</span>
           </Link>
           <span className="text-gray-500 text-sm hidden sm:block">
-            당근 · 번개장터 · 중고나라 · 헬로마켓 통합 비교
+            당근 · 번개장터 · 중고나라 통합 비교
           </span>
         </div>
       </header>
 
       {/* Hero */}
-      <section className="max-w-5xl mx-auto px-4 py-20 text-center">
+      <section className="max-w-5xl mx-auto px-4 pt-20 pb-12 text-center">
         <div className="inline-flex items-center gap-2 bg-blue-900/30 border border-blue-700/40 rounded-full px-4 py-1.5 text-blue-400 text-sm mb-6">
           <ShieldCheck size={14} />
-          4대 중고 플랫폼 실시간 비교
+          어떤 제품이든 — 실시간 AI 분석
         </div>
+
         <h1 className="text-4xl sm:text-5xl font-extrabold text-white mb-4 leading-tight">
           중고 구매, 지금 사도 될까요?
           <br />
           <span className="text-blue-400">신호등</span>이 알려드립니다
         </h1>
         <p className="text-gray-400 text-lg mb-10 max-w-xl mx-auto">
-          당근마켓, 번개장터, 중고나라, 헬로마켓 1년치 데이터를 분석해
+          제품명을 입력하면 AI가 실시간으로 중고 플랫폼을 분석해
           <br />
-          지금 구매가 좋은 딜인지 빨간불·주황불·초록불로 판단해드려요
+          지금 구매가 좋은 딜인지 바로 판단해드립니다
         </p>
 
-        <div className="max-w-xl mx-auto">
+        <div className="max-w-xl mx-auto mb-8">
           <SearchBar large />
         </div>
 
-        <div className="flex flex-wrap justify-center gap-3 mt-8">
-          {[
-            "신제품가 비교",
-            "중고 시세 트렌드",
-            "플랫폼별 최저가",
-            "구매 점수",
-            "실사용 후기",
-          ].map((f) => (
-            <span
-              key={f}
-              className="text-xs bg-gray-800 text-gray-400 px-3 py-1 rounded-full border border-gray-700"
+        {/* 예시 검색어 */}
+        <div className="flex flex-wrap justify-center gap-2">
+          {EXAMPLE_SEARCHES.map((s) => (
+            <Link
+              key={s}
+              href={`/search?q=${encodeURIComponent(s)}`}
+              className="text-xs bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white px-3 py-1.5 rounded-full border border-gray-700 hover:border-gray-500 transition-all"
             >
-              {f}
-            </span>
+              {s}
+            </Link>
           ))}
         </div>
       </section>
 
-      {/* Popular products */}
+      {/* 작동 방식 */}
       <section className="max-w-5xl mx-auto px-4 pb-20">
-        <div className="flex items-center gap-2 mb-6">
-          <BarChart2 size={18} className="text-blue-400" />
-          <h2 className="text-white font-semibold text-lg">인기 제품 시세</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {HOW_IT_WORKS.map((item) => (
+            <div
+              key={item.title}
+              className="bg-gray-900 border border-gray-700 rounded-2xl p-5"
+            >
+              <div className="w-10 h-10 rounded-xl bg-gray-800 flex items-center justify-center mb-3">
+                {item.icon}
+              </div>
+              <div className="text-white font-semibold mb-1">{item.title}</div>
+              <div className="text-gray-400 text-sm leading-relaxed">
+                {item.desc}
+              </div>
+            </div>
+          ))}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {MOCK_PRODUCTS.map((product) => {
-            const savings = Math.round(
-              (1 - product.avgUsedPrice / product.currentNewPrice) * 100
-            );
-            return (
-              <Link
-                key={product.id}
-                href={`/product/${product.id}`}
-                className="group bg-gray-900 border border-gray-700 rounded-2xl p-5 hover:border-blue-600 transition-all hover:shadow-lg hover:shadow-blue-900/20"
-              >
-                <div className="flex items-start gap-4">
-                  <img
-                    src={product.imageUrl}
-                    alt={product.name}
-                    className="w-20 h-20 object-cover rounded-xl bg-gray-800 shrink-0"
+        {/* 플랫폼 표시 */}
+        <div className="mt-6 bg-gray-900 border border-gray-700 rounded-2xl p-5">
+          <div className="text-gray-400 text-xs mb-3 text-center">
+            실시간 수집 플랫폼
+          </div>
+          <div className="flex items-center justify-center gap-6 flex-wrap">
+            {[
+              { name: "번개장터", color: "#FF3D00", note: "API 직접 연동" },
+              { name: "중고나라", color: "#2DB400", note: "API 직접 연동" },
+              { name: "당근마켓", color: "#FF6F0F", note: "AI 추정" },
+              { name: "헬로마켓", color: "#1A73E8", note: "AI 추정" },
+            ].map((p) => (
+              <div key={p.name} className="flex flex-col items-center gap-1">
+                <div className="flex items-center gap-1.5">
+                  <div
+                    className="w-2.5 h-2.5 rounded-full"
+                    style={{ backgroundColor: p.color }}
                   />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <div className="text-gray-400 text-xs mb-0.5">
-                          {product.brand} · {product.category}
-                        </div>
-                        <div className="text-white font-semibold text-base leading-tight group-hover:text-blue-400 transition-colors truncate">
-                          {product.name}
-                        </div>
-                      </div>
-                      <SignalBadge signal={product.dealAnalysis.signal} />
-                    </div>
-
-                    <div className="mt-3 grid grid-cols-2 gap-2">
-                      <div>
-                        <div className="text-gray-500 text-xs">평균 중고가</div>
-                        <div className="text-white font-bold text-lg">
-                          {formatPrice(product.avgUsedPrice)}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-gray-500 text-xs">신제품가 대비</div>
-                        <div className="text-green-400 font-bold text-lg">
-                          -{savings}%
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                  <span className="text-white text-sm font-medium">
+                    {p.name}
+                  </span>
                 </div>
-              </Link>
-            );
-          })}
+                <span className="text-gray-600 text-xs">{p.note}</span>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
     </div>

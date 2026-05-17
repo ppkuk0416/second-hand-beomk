@@ -1,125 +1,56 @@
+"use client";
+
+import { useEffect, useState, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { SearchBar } from "@/components/SearchBar";
-import { SignalBadge } from "@/components/SignalBadge";
-import { MOCK_PRODUCTS, searchProducts } from "@/lib/mockData";
-import { TrendingDown, SearchX, Sparkles, Zap } from "lucide-react";
-import { Product } from "@/lib/types";
+import { AnalysisResultView } from "@/components/AnalysisResult";
+import { AnalysisResult } from "@/lib/analyze";
+import { TrendingDown, Loader2, AlertCircle } from "lucide-react";
+import { Suspense } from "react";
 
-function formatPrice(price: number) {
-  return price.toLocaleString("ko-KR") + "원";
-}
+function SearchContent() {
+  const searchParams = useSearchParams();
+  const query = searchParams.get("q") ?? "";
 
-async function aiSearch(
-  query: string
-): Promise<{ products: Product[]; method: string; message: string | null }> {
-  // 서버 컴포넌트에서 직접 AI 검색 로직 실행
-  const { MOCK_PRODUCTS: products } = await import("@/lib/mockData");
+  const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [step, setStep] = useState("");
 
-  if (!query.trim()) return { products, method: "all", message: null };
+  const analyze = useCallback(async (q: string) => {
+    if (!q.trim()) return;
+    setLoading(true);
+    setResult(null);
+    setError(null);
 
-  // 토큰 기반 퍼지 검색
-  const tokens = query
-    .toLowerCase()
-    .replace(/[^\w\s가-힣]/g, " ")
-    .split(/\s+/)
-    .filter((t) => t.length > 0);
+    // 단계별 메시지
+    setStep("번개장터 실시간 매물 수집 중...");
+    await new Promise((r) => setTimeout(r, 800));
+    setStep("중고나라 가격 데이터 수집 중...");
+    await new Promise((r) => setTimeout(r, 600));
+    setStep("AI가 제품을 파악하고 분석 중...");
 
-  if (tokens.length === 0)
-    return { products, method: "all", message: null };
-
-  const scored = products.map((p) => {
-    const haystack = [
-      p.name,
-      p.brand,
-      p.category,
-      ...p.specs.map((s) => s.value),
-    ]
-      .join(" ")
-      .toLowerCase();
-
-    let score = 0;
-    for (const token of tokens) {
-      if (haystack.includes(token)) score += 2;
-      else if (token.length >= 2) {
-        for (let i = 0; i <= token.length - 2; i++) {
-          if (haystack.includes(token.slice(i, i + 2))) {
-            score += 0.5;
-            break;
-          }
-        }
-      }
+    try {
+      const res = await fetch(`/api/analyze?q=${encodeURIComponent(q)}`);
+      if (!res.ok) throw new Error("분석 실패");
+      const data: AnalysisResult = await res.json();
+      setResult(data);
+    } catch {
+      setError("분석 중 오류가 발생했습니다. 다시 시도해주세요.");
+    } finally {
+      setLoading(false);
+      setStep("");
     }
-    return { product: p, score };
-  });
+  }, []);
 
-  const fuzzyResults = scored
-    .filter((s) => s.score > 0)
-    .sort((a, b) => b.score - a.score)
-    .map((s) => s.product);
-
-  // Anthropic API를 서버에서 직접 호출
-  if (!process.env.ANTHROPIC_API_KEY) {
-    return { products: fuzzyResults, method: "fuzzy", message: null };
-  }
-
-  try {
-    const Anthropic = (await import("@anthropic-ai/sdk")).default;
-    const client = new Anthropic();
-
-    const productList = products
-      .map(
-        (p) =>
-          `- id: "${p.id}", 이름: "${p.name}", 브랜드: "${p.brand}", 카테고리: "${p.category}"`
-      )
-      .join("\n");
-
-    const response = await client.messages.create({
-      model: "claude-haiku-4-5-20251001",
-      max_tokens: 300,
-      system: `당신은 중고거래 플랫폼의 AI 검색 어시스턴트입니다.
-사용자가 중고 제품을 검색할 때 오타, 약어, 불완전한 입력이 있어도 의도를 파악해서 관련 제품을 찾아주세요.
-예: "커클랜드 드라이버" → 골프 드라이버 / "아이폰15" → iPhone 15 Pro / "소니 헤드폰" → Sony WH-1000XM5
-
-아래 제품 목록 중에서 검색어와 관련있는 제품의 id를 배열로 반환하세요.
-관련도 순서로 정렬하고, 없으면 빈 배열 반환.
-반드시 JSON만 반환: {"ids": ["id1", "id2"], "message": "검색 도움말 (불필요하면 null)"}
-
-제품 목록:
-${productList}`,
-      messages: [{ role: "user", content: `검색어: "${query}"` }],
-    });
-
-    const text =
-      response.content[0].type === "text" ? response.content[0].text : "{}";
-    const parsed = JSON.parse(text.match(/\{[\s\S]*\}/)?.[0] ?? "{}");
-
-    const ids: string[] = parsed.ids ?? [];
-    const aiProducts = ids
-      .map((id) => products.find((p) => p.id === id))
-      .filter(Boolean) as Product[];
-
-    const results = aiProducts.length > 0 ? aiProducts : fuzzyResults;
-
-    return {
-      products: results,
-      method: aiProducts.length > 0 ? "ai" : "fuzzy",
-      message: parsed.message ?? null,
-    };
-  } catch {
-    return { products: fuzzyResults, method: "fuzzy", message: null };
-  }
-}
-
-export default async function SearchPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ q?: string }>;
-}) {
-  const { q = "" } = await searchParams;
-  const { products: results, method, message } = await aiSearch(q);
+  useEffect(() => {
+    if (query) analyze(query);
+  }, [query, analyze]);
 
   return (
     <div className="min-h-screen bg-gray-950">
+      {/* Header */}
       <header className="border-b border-gray-800 bg-gray-950/80 backdrop-blur-sm sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-4 py-4 flex items-center gap-4">
           <Link href="/" className="flex items-center gap-2 shrink-0">
@@ -131,127 +62,91 @@ export default async function SearchPage({
             </span>
           </Link>
           <div className="flex-1 max-w-xl">
-            <SearchBar defaultValue={q} />
+            <SearchBar defaultValue={query} />
           </div>
         </div>
       </header>
 
       <main className="max-w-5xl mx-auto px-4 py-8">
-        {/* 검색 결과 헤더 */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="text-gray-400 text-sm">
-            <span className="text-white font-medium">&ldquo;{q}&rdquo;</span>{" "}
-            검색 결과 —{" "}
-            <span className="text-white font-medium">{results.length}개</span>{" "}
-            제품
-          </div>
-          {method === "ai" && (
-            <div className="flex items-center gap-1.5 text-xs bg-purple-900/40 border border-purple-700/50 text-purple-300 px-3 py-1 rounded-full">
-              <Sparkles size={12} />
-              AI 검색
+        {/* 로딩 */}
+        {loading && (
+          <div className="flex flex-col items-center justify-center py-32 gap-6">
+            {/* 애니메이션 신호등 */}
+            <div className="flex flex-col items-center gap-2 bg-gray-900 rounded-2xl p-6 border border-gray-700">
+              <div
+                className={`w-10 h-10 rounded-full transition-all duration-500 ${
+                  step.includes("AI")
+                    ? "bg-red-500 shadow-[0_0_20px_rgba(239,68,68,0.6)]"
+                    : "bg-red-900/30"
+                }`}
+              />
+              <div
+                className={`w-10 h-10 rounded-full transition-all duration-500 ${
+                  step.includes("중고나라")
+                    ? "bg-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.6)]"
+                    : "bg-yellow-900/30"
+                }`}
+              />
+              <div
+                className={`w-10 h-10 rounded-full transition-all duration-500 ${
+                  step.includes("번개장터")
+                    ? "bg-green-500 shadow-[0_0_20px_rgba(34,197,94,0.6)]"
+                    : "bg-green-900/30"
+                }`}
+              />
             </div>
-          )}
-          {method === "fuzzy" && results.length > 0 && (
-            <div className="flex items-center gap-1.5 text-xs bg-blue-900/40 border border-blue-700/50 text-blue-300 px-3 py-1 rounded-full">
-              <Zap size={12} />
-              유사 검색
-            </div>
-          )}
-        </div>
 
-        {/* AI 안내 메시지 */}
-        {message && (
-          <div className="bg-purple-900/20 border border-purple-700/40 rounded-xl px-4 py-3 text-sm text-purple-300 mb-5 flex items-start gap-2">
-            <Sparkles size={14} className="shrink-0 mt-0.5" />
-            {message}
+            <div className="text-center">
+              <div className="flex items-center gap-2 text-white font-medium mb-1">
+                <Loader2 size={16} className="animate-spin text-blue-400" />
+                {step}
+              </div>
+              <div className="text-gray-500 text-sm">
+                &ldquo;{query}&rdquo; 분석 중
+              </div>
+            </div>
           </div>
         )}
 
-        {results.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-28 text-gray-500">
-            <SearchX size={48} className="mb-4 opacity-40" />
-            <p className="text-lg font-medium text-gray-400 mb-1">
-              검색 결과가 없습니다
-            </p>
-            <p className="text-sm mb-6 text-center">
-              다른 검색어를 입력해보세요
-              <br />
-              <span className="text-gray-600">
-                예: &quot;커클랜드&quot;, &quot;아이폰&quot;, &quot;노트북&quot;
-              </span>
-            </p>
-            <div className="flex flex-wrap justify-center gap-2">
-              {[
-                "커클랜드 드라이버",
-                "갤럭시",
-                "아이폰",
-                "맥북",
-                "다이슨",
-                "소니 헤드폰",
-              ].map((s) => (
-                <Link
-                  key={s}
-                  href={`/search?q=${encodeURIComponent(s)}`}
-                  className="bg-gray-800 hover:bg-gray-700 text-gray-300 px-4 py-2 rounded-xl text-sm border border-gray-700 transition-colors"
-                >
-                  {s}
-                </Link>
-              ))}
-            </div>
+        {/* 에러 */}
+        {error && !loading && (
+          <div className="flex flex-col items-center justify-center py-24 gap-4">
+            <AlertCircle size={40} className="text-red-400 opacity-60" />
+            <p className="text-gray-400">{error}</p>
+            <button
+              onClick={() => analyze(query)}
+              className="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2 rounded-xl text-sm font-medium transition-colors"
+            >
+              다시 시도
+            </button>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {results.map((product) => {
-              const savings = Math.round(
-                (1 - product.avgUsedPrice / product.currentNewPrice) * 100
-              );
-              const totalListings = product.platforms.reduce(
-                (s, p) => s + p.count,
-                0
-              );
-              return (
-                <Link
-                  key={product.id}
-                  href={`/product/${product.id}`}
-                  className="group bg-gray-900 border border-gray-700 rounded-2xl overflow-hidden hover:border-blue-600 transition-all hover:shadow-lg hover:shadow-blue-900/20"
-                >
-                  <img
-                    src={product.imageUrl}
-                    alt={product.name}
-                    className="w-full h-44 object-cover bg-gray-800"
-                  />
-                  <div className="p-4">
-                    <div className="text-gray-400 text-xs mb-1">
-                      {product.brand} · {product.category}
-                    </div>
-                    <div className="text-white font-semibold text-base leading-snug group-hover:text-blue-400 transition-colors mb-3">
-                      {product.name}
-                    </div>
-                    <SignalBadge signal={product.dealAnalysis.signal} />
-                    <div className="mt-3 flex items-end justify-between">
-                      <div>
-                        <div className="text-gray-500 text-xs">평균 중고가</div>
-                        <div className="text-white font-bold">
-                          {formatPrice(product.avgUsedPrice)}
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-gray-500 text-xs">절약</div>
-                        <div className="text-green-400 font-bold">
-                          -{savings}%
-                        </div>
-                      </div>
-                    </div>
-                    <div className="mt-3 text-xs text-gray-500">
-                      매물 {totalListings}개 · 4개 플랫폼
-                    </div>
-                  </div>
-                </Link>
-              );
-            })}
+        )}
+
+        {/* 결과 */}
+        {result && !loading && (
+          <>
+            <div className="text-gray-400 text-sm mb-6">
+              <span className="text-white font-medium">&ldquo;{query}&rdquo;</span> 분석 결과
+            </div>
+            <AnalysisResultView result={result} query={query} />
+          </>
+        )}
+
+        {/* 초기 상태 */}
+        {!query && !loading && !result && (
+          <div className="flex flex-col items-center justify-center py-24 text-gray-500">
+            <p>검색어를 입력하면 AI가 실시간으로 분석합니다</p>
           </div>
         )}
       </main>
     </div>
+  );
+}
+
+export default function SearchPage() {
+  return (
+    <Suspense>
+      <SearchContent />
+    </Suspense>
   );
 }
